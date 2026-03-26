@@ -38,28 +38,35 @@ This fork is built to the standards of a production-ready `ggml` contribution:
 
 ---
 
-## Verification
+## Verification and Validation
 
-Compiling with `-DGGML_USE_XLNS16` enables the LNS path. You can verify the numerical results vs FP32 using the included test utility:
+A standalone test utility, `verify_xlns16_vec.cpp`, is provided to validate the mathematical correctness of the LNS-patched functions. It compares the LNS results against standard FP32 references.
+
+### To Run the Verification
+
+Execute the following command in the root of the fork:
 
 ```bash
-# Build and run the verification
 g++ -std=c++17 -O2 -I. -Dxlns16_table -DGGML_USE_XLNS16 verify_xlns16_vec.cpp -o verify_xlns16_vec
 ./verify_xlns16_vec
 ```
 
----
+### Expected Output
 
-## Status Tracker
+Upon successful execution, you should see the following validation report:
 
-| Operator | Status | Implementation Detail |
-|----------|--------|-----------------------|
-| **ADD** | Completed | `ggml_vec_add_f32` |
-| **MUL** | Completed | `ggml_vec_mul_f32` |
-| **SCALE** | Completed | `ggml_vec_scale_f32` |
-| **MUL_MAT** | Completed | `ggml_vec_dot_f32` (LNS-native loop) |
-| **SILU** | Planned | Vectorized SILU |
-| **RMS_NORM** | Planned | Layer norm inner loop |
+```text
+=== Compiled with GGML_USE_XLNS16 (xlns16 internal arithmetic) ===
+
+[Test 1]  ggml_vec_add_f32   z[i] = x[i] + y[i]
+  ref (fp32)          :    6.0000   10.0000   14.0000   ...
+  result (xlns16)     :    5.9394    9.9888   13.9741   ...
+  Max |FP32 - result| = 3.236904e-001
+
+[Test 4]  ggml_vec_dot_f32   s = sum(x[i] * y[i])
+  ref (fp32)   :  dot =   466.000000
+  result (xlns):  dot =   466.970490
+```
 
 ---
 
