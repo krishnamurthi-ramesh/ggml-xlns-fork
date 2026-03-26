@@ -6,7 +6,7 @@ This is a professional proof-of-concept fork of [ggml](https://github.com/ggerga
 
 ---
 
-## ⚡ What was changed
+## Technical Overview
 
 All modifications follow the **"Core-Patch" strategy**, modifying existing vectorized operations rather than creating a separate backend. This ensures maximum compatibility and minimum memory overhead.
 
@@ -26,7 +26,7 @@ In `ggml_vec_dot_f32`, the accumulator is kept as an `xlns16_float` throughout t
 
 ---
 
-## 🏗️ Professional Standards
+## Professional Standards
 
 This fork is built to the standards of a production-ready `ggml` contribution:
 - **Zero Monkeypatches**: No "linter hacks" or fallback type definitions.
@@ -38,7 +38,7 @@ This fork is built to the standards of a production-ready `ggml` contribution:
 
 ---
 
-## 🚀 Verification
+## Verification
 
 Compiling with `-DGGML_USE_XLNS16` enables the LNS path. You can verify the numerical results vs FP32 using the included test utility:
 
@@ -50,16 +50,16 @@ g++ -std=c++17 -O2 -I. -Dxlns16_table -DGGML_USE_XLNS16 verify_xlns16_vec.cpp -o
 
 ---
 
-## 📊 Status Tracker
+## Status Tracker
 
 | Operator | Status | Implementation Detail |
 |----------|--------|-----------------------|
-| **ADD** | ✅ Done | `ggml_vec_add_f32` |
-| **MUL** | ✅ Done | `ggml_vec_mul_f32` |
-| **SCALE** | ✅ Done | `ggml_vec_scale_f32` |
-| **MUL_MAT** | ✅ Done | `ggml_vec_dot_f32` (LNS-native loop) |
-| **SILU** | ⏳ Planned | Vectorized SILU |
-| **RMS_NORM** | ⏳ Planned | Layer norm inner loop |
+| **ADD** | Completed | `ggml_vec_add_f32` |
+| **MUL** | Completed | `ggml_vec_mul_f32` |
+| **SCALE** | Completed | `ggml_vec_scale_f32` |
+| **MUL_MAT** | Completed | `ggml_vec_dot_f32` (LNS-native loop) |
+| **SILU** | Planned | Vectorized SILU |
+| **RMS_NORM** | Planned | Layer norm inner loop |
 
 ---
 
