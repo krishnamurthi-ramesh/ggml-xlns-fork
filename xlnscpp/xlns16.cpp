@@ -1,3 +1,4 @@
+#pragma once
 // 16-bit XLNS for C++
 // copyright 1999-2025 Mark G. Arnold
 // these routines 
