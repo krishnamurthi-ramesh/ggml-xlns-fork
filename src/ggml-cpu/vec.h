@@ -11,21 +11,30 @@
 #include <Accelerate/Accelerate.h>
 #endif
 
+// Standard headers for types/macros (helps IDEs when ggml-impl.h isn't resolving)
+#include <stdint.h>
+#include <stdbool.h>
+#include <stddef.h>
+
+// Fallback for restrict keyword if ggml-impl.h is not found/defined
+#ifndef GGML_RESTRICT
+#    if defined(_MSC_VER) && !defined(__clang__)
+#        define GGML_RESTRICT __restrict
+#    else
+#        define GGML_RESTRICT __restrict__
+#    endif
+#endif
+
 // ─── XLNS16 support ──────────────────────────────────────────────────────────
 // When building with -DGGML_USE_XLNS16 -Dxlns16_table, the fundamental
 // float32 vector operations below delegate to xlns16_float arithmetic.
 // Inputs and outputs remain 32-bit float; LNS is used purely internally.
-// This is the exact #ifdef-guard approach described by @markgarnold:
-//   https://github.com/xlnsresearch/xlnscpp/discussions/1
-#ifdef GGML_USE_XLNS16
-#ifdef __cplusplus
-extern "C++" {
+//
+// NOTE: xlns16 is a C++ library; LNS arithmetic is only enabled for C++ TU's.
+#if defined(GGML_USE_XLNS16) && defined(__cplusplus)
+#include "../../xlnscpp/xlns16.cpp"   // included once per TU via pragma once in vec.h
 #endif
-#include "../../xlnscpp/xlns16.cpp"   // include once per TU via pragma once in vec.h
-#ifdef __cplusplus
-}
-#endif
-#endif  // GGML_USE_XLNS16
+// ─────────────────────────────────────────────────────────────────────────────
 // ─────────────────────────────────────────────────────────────────────────────
 
 // floating point type used to accumulate sums
@@ -75,7 +84,7 @@ inline static void ggml_vec_set_f16(const int n, ggml_fp16_t * x, const ggml_fp1
 inline static void ggml_vec_set_bf16(const int n, ggml_bf16_t * x, const ggml_bf16_t v) { for (int i = 0; i < n; ++i) x[i] = v; }
 
 inline static void ggml_vec_add_f32 (const int n, float * z, const float * x, const float * y) {
-#ifdef GGML_USE_XLNS16
+#if defined(GGML_USE_XLNS16) && defined(__cplusplus)
     // ADD in xlns16: convert each float to xlns16_float, use overloaded +, convert back.
     // Dynamic conversion every call — no caching — as confirmed by @markgarnold.
     for (int i = 0; i < n; ++i) {
@@ -121,7 +130,7 @@ inline static void ggml_vec_neg_f16 (const int n, ggml_fp16_t * y, const ggml_fp
 }
 
 inline static void ggml_vec_mul_f32 (const int n, float * z, const float * x, const float * y) {
-#ifdef GGML_USE_XLNS16
+#if defined(GGML_USE_XLNS16) && defined(__cplusplus)
     // MUL in xlns16: multiplication is exact (integer addition of log representations).
     // This is the "free" operation in LNS — no approximation needed.
     for (int i = 0; i < n; ++i) {
