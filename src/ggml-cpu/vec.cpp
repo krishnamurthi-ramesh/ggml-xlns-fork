@@ -8,12 +8,42 @@ ggml_fp16_t ggml_table_gelu_f16[1 << 16];
 // precomputed quick gelu table for f16 (128 KB)
 ggml_fp16_t ggml_table_gelu_quick_f16[1 << 16];
 
+// ── XLNS16 support (included once via vec.cpp) ────────────────────────────
+// vec.h is included by many TUs; the xlns16 implementation is included here
+// (in the single non-inline .cpp) to avoid multiple-definition errors.
+#ifdef GGML_USE_XLNS16
+// xlns16_table must be #defined before this include (pass -Dxlns16_table)
+#include "../../xlnscpp/xlns16.cpp"
+#endif
+// ────────────────────────────────────────────────────────────────────────────
+
 void ggml_vec_dot_f32(int n, float * GGML_RESTRICT s, size_t bs, const float * GGML_RESTRICT x, size_t bx, const float * GGML_RESTRICT y, size_t by, int nrc) {
    assert(nrc == 1);
    GGML_UNUSED(nrc);
    GGML_UNUSED(bx);
    GGML_UNUSED(by);
    GGML_UNUSED(bs);
+
+#ifdef GGML_USE_XLNS16
+   // ── DOT PRODUCT in xlns16 ────────────────────────────────────────────
+   // This is the inner loop of MUL_MAT — the most performance-critical op.
+   //
+   // In LNS: multiplication is EXACT (integer add of log representations).
+   //         addition uses the table-driven sb/db Gaussian log functions.
+   //
+   // The accumulator stays in xlns16_float for the entire loop.
+   // Conversion float -> xlns16 happens once per element (no caching needed
+   // for activations; float2xlns16_ caches previously seen values).
+   //
+   // Design confirmed by @markgarnold:
+   //   https://github.com/xlnsresearch/xlnscpp/discussions/1
+   xlns16_float sum = float2xlns16_(0.0f);
+   for (int i = 0; i < n; ++i) {
+       sum = sum + (float2xlns16_(x[i]) * float2xlns16_(y[i]));
+   }
+   *s = xlns16_2float(sum);
+   return;
+#endif  // GGML_USE_XLNS16
 
 #if defined(GGML_SIMD)
     float sumf = 0.0f;
