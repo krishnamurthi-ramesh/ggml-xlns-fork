@@ -11,6 +11,23 @@
 #include <Accelerate/Accelerate.h>
 #endif
 
+// ─── XLNS16 support ──────────────────────────────────────────────────────────
+// When building with -DGGML_USE_XLNS16 -Dxlns16_table, the fundamental
+// float32 vector operations below delegate to xlns16_float arithmetic.
+// Inputs and outputs remain 32-bit float; LNS is used purely internally.
+// This is the exact #ifdef-guard approach described by @markgarnold:
+//   https://github.com/xlnsresearch/xlnscpp/discussions/1
+#ifdef GGML_USE_XLNS16
+#ifdef __cplusplus
+extern "C++" {
+#endif
+#include "../../xlnscpp/xlns16.cpp"   // include once per TU via pragma once in vec.h
+#ifdef __cplusplus
+}
+#endif
+#endif  // GGML_USE_XLNS16
+// ─────────────────────────────────────────────────────────────────────────────
+
 // floating point type used to accumulate sums
 typedef double ggml_float;
 
@@ -58,6 +75,13 @@ inline static void ggml_vec_set_f16(const int n, ggml_fp16_t * x, const ggml_fp1
 inline static void ggml_vec_set_bf16(const int n, ggml_bf16_t * x, const ggml_bf16_t v) { for (int i = 0; i < n; ++i) x[i] = v; }
 
 inline static void ggml_vec_add_f32 (const int n, float * z, const float * x, const float * y) {
+#ifdef GGML_USE_XLNS16
+    // ADD in xlns16: convert each float to xlns16_float, use overloaded +, convert back.
+    // Dynamic conversion every call — no caching — as confirmed by @markgarnold.
+    for (int i = 0; i < n; ++i) {
+        z[i] = xlns16_2float(float2xlns16_(x[i]) + float2xlns16_(y[i]));
+    }
+#else
     int i = 0;
 #if defined(__AVX2__)
     for (; i + 7 < n; i += 8) {
@@ -70,6 +94,7 @@ inline static void ggml_vec_add_f32 (const int n, float * z, const float * x, co
     for (; i < n; ++i) {
         z[i] = x[i] + y[i];
     }
+#endif  // GGML_USE_XLNS16
 }
 
 inline static void ggml_vec_add_f16 (const int n, ggml_fp16_t * z, const ggml_fp16_t * x, const ggml_fp16_t * y) {
@@ -95,7 +120,17 @@ inline static void ggml_vec_neg_f16 (const int n, ggml_fp16_t * y, const ggml_fp
     }
 }
 
-inline static void ggml_vec_mul_f32 (const int n, float * z, const float * x, const float * y) { for (int i = 0; i < n; ++i) z[i]  = x[i]*y[i];   }
+inline static void ggml_vec_mul_f32 (const int n, float * z, const float * x, const float * y) {
+#ifdef GGML_USE_XLNS16
+    // MUL in xlns16: multiplication is exact (integer addition of log representations).
+    // This is the "free" operation in LNS — no approximation needed.
+    for (int i = 0; i < n; ++i) {
+        z[i] = xlns16_2float(float2xlns16_(x[i]) * float2xlns16_(y[i]));
+    }
+#else
+    for (int i = 0; i < n; ++i) z[i] = x[i]*y[i];
+#endif  // GGML_USE_XLNS16
+}
 inline static void ggml_vec_mul_f16 (const int n, ggml_fp16_t * z, const ggml_fp16_t * x, const ggml_fp16_t * y) {
     for (int i = 0; i < n; ++i) {
         z[i] = GGML_CPU_FP32_TO_FP16(GGML_CPU_FP16_TO_FP32(x[i]) * GGML_CPU_FP16_TO_FP32(y[i]));
@@ -713,7 +748,14 @@ inline static void ggml_vec_mad1_f32(const int n, float * y, const float * x, co
 
 //inline static void ggml_vec_scale_f32(const int n, float * y, const float   v) { for (int i = 0; i < n; ++i) y[i] *= v;          }
 inline static void ggml_vec_scale_f32(const int n, float * y, const float   v) {
-#if defined(GGML_USE_ACCELERATE)
+#ifdef GGML_USE_XLNS16
+    // SCALE in xlns16: multiply each element by scalar v.
+    // Scalar-vector multiply is exact in LNS (addition of log(v) to each log(y[i])).
+    const xlns16_float lv = float2xlns16_(v);
+    for (int i = 0; i < n; ++i) {
+        y[i] = xlns16_2float(float2xlns16_(y[i]) * lv);
+    }
+#elif defined(GGML_USE_ACCELERATE)
     vDSP_vsmul(y, 1, &v, y, 1, n);
 #elif defined(GGML_SIMD)
     #if defined(__ARM_FEATURE_SVE)
