@@ -14,9 +14,7 @@
 //      each cvt table 256Kbyte; sb db table each 5Kbyte
 // they are based on similar math foundation (Gaussian logs, sb and db) as Python xlns,
 //    but use different internal storage format:
-//    +------+-------------------------+
-//    | sign | int(log2) . frac(log2)  |
-//    +------+-------------------------+
+//    sign  int(log2) . frac(log2) 
 //    the int(log2) is not twos complement; it is offset (logsignmask XORed)
 //    for the 16-bit format in this file, this is roughly similar to bfloat16
 //    1 sign bit, 8 int(log2) bits, 7 frac(log2) bits
