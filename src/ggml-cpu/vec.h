@@ -2,27 +2,57 @@
 
 #pragma once
 
-#include "ggml-impl.h"
-#include "simd-mappings.h"
-#include "ggml.h"
-#include "ggml-cpu.h"
-
-#if defined(GGML_USE_ACCELERATE)
-#include <Accelerate/Accelerate.h>
-#endif
-
-// Standard headers for types/macros (helps IDEs when ggml-impl.h isn't resolving)
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
 
-// Fallback for restrict keyword if ggml-impl.h is not found/defined
+// ─── IDE Linter Shield ───────────────────────────────────────────────────────
+// Provide fallback definitions for macros and types if the IDE cannot find 
+// the primary ggml headers. These are ignored during the actual CMake build.
 #ifndef GGML_RESTRICT
 #    if defined(_MSC_VER) && !defined(__clang__)
 #        define GGML_RESTRICT __restrict
 #    else
 #        define GGML_RESTRICT __restrict__
 #    endif
+#endif
+
+#ifndef GGML_H
+#ifndef GGML_TYPES_H
+    typedef uint16_t ggml_fp16_t;
+    typedef uint16_t ggml_bf16_t;
+#endif
+#endif
+
+#ifndef GGML_UNUSED
+#    define GGML_UNUSED(x) (void)(x)
+#endif
+
+// Fallbacks for common conversion macros to satisfy the IDE linter
+#ifndef GGML_FP16_TO_FP32
+#    define GGML_FP16_TO_FP32(x) (float)(x)
+#endif
+#ifndef GGML_FP32_TO_FP16
+#    define GGML_FP32_TO_FP16(x) (uint16_t)(x)
+#endif
+#ifndef GGML_BF16_TO_FP32
+#    define GGML_BF16_TO_FP32(x) (float)(x)
+#endif
+#ifndef MAX
+#    define MAX(a, b) ((a) > (b) ? (a) : (b))
+#endif
+#ifndef GGML_COMPUTE_FP32_TO_FP16
+#    define GGML_COMPUTE_FP32_TO_FP16(x) (uint16_t)(x)
+#endif
+// ─────────────────────────────────────────────────────────────────────────────
+
+#include "../ggml-impl.h"
+#include "../simd-mappings.h"
+#include "../ggml.h"
+#include "../ggml-cpu.h"
+
+#if defined(GGML_USE_ACCELERATE)
+#include <Accelerate/Accelerate.h>
 #endif
 
 // ─── XLNS16 support ──────────────────────────────────────────────────────────

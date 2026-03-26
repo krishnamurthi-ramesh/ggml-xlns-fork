@@ -13,7 +13,6 @@
 
 #include <cstdio>
 #include <cmath>
-#include <cfloat>
 
 // ── Include xlns16 ──────────────────────────────────────────────────────────
 // xlns16_table must be defined before including xlns16.cpp
