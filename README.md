@@ -55,7 +55,9 @@ This fork is built to the standards of a production-ready `ggml` contribution:
 A standalone test utility, `verify_xlns16_vec.cpp`, is provided to validate the mathematical correctness of the LNS-patched functions.
 
 ### Proof of Verification
-![Verification Results](docs/verification_results.png)
+<img width="1340" height="685" alt="image" src="https://github.com/user-attachments/assets/2d4fca9e-28b5-4532-99cb-0d6995d0cf98" />
+
+
 
 ### To Run the Verification
 Execute the following command in the root of the fork:
